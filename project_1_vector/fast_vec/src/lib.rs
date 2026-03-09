@@ -61,15 +61,33 @@ impl<T> FastVec<T> {
     // Student 1 and Student 2 should implement this together
     // Use the project handout as a guide for this part!
     pub fn get(&self, i: usize) -> &T {
-        todo!("implement get!");
+        if i >= self.len {
+            panic!("index out of bounds");
+        }
+        unsafe {
+            return &*self.ptr_to_data.add(i);
+        }
     }
 
     // Student 2 should implement this.
     pub fn push(&mut self, t: T) {
-        if self.len == self.capacity {
-            todo!("implement growing the vector by doubling the size!");
-        } else {
-            todo!("implement pushing t directly since the vector still has capacity!");
+        unsafe {
+            if self.len == self.capacity {
+                let new_capacity = self.capacity * 2;
+                let new_ptr = MALLOC.malloc(size_of::<T>() * new_capacity) as *mut T;
+                for i in 0..self.len {
+                    let old_ptr = self.ptr_to_data.add(i);
+                    let element = ptr::read(old_ptr);
+                    let new_element_ptr = new_ptr.add(i);
+                    ptr::write(new_element_ptr, element);
+                }
+                MALLOC.free(self.ptr_to_data as *mut u8);
+                self.ptr_to_data = new_ptr;
+                self.capacity = new_capacity;
+            }
+            let ptr = self.ptr_to_data.add(self.len);
+            ptr::write(ptr, t);
+            self.len = self.len + 1;
         }
     }
 
