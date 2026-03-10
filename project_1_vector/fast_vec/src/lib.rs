@@ -62,10 +62,11 @@ impl<T> FastVec<T> {
     // Use the project handout as a guide for this part!
     pub fn get(&self, i: usize) -> &T {
         if i >= self.len {
-            panic!("index out of bounds");
+            panic!("FastVec: get out of bounds");
         }
+    
         unsafe {
-            return &*self.ptr_to_data.add(i);
+            &*self.ptr_to_data.add(i)
         }
     }
 
@@ -75,25 +76,37 @@ impl<T> FastVec<T> {
             if self.len == self.capacity {
                 let new_capacity = self.capacity * 2;
                 let new_ptr = MALLOC.malloc(size_of::<T>() * new_capacity) as *mut T;
+                
                 for i in 0..self.len {
-                    let old_ptr = self.ptr_to_data.add(i);
-                    let element = ptr::read(old_ptr);
-                    let new_element_ptr = new_ptr.add(i);
-                    ptr::write(new_element_ptr, element);
+                    let value = std::ptr::read(self.ptr_to_data.add(i));
+                    std::ptr::write(new_ptr.add(i), value);
                 }
                 MALLOC.free(self.ptr_to_data as *mut u8);
                 self.ptr_to_data = new_ptr;
                 self.capacity = new_capacity;
             }
-            let ptr = self.ptr_to_data.add(self.len);
-            ptr::write(ptr, t);
+            std::ptr::write(self.ptr_to_data.add(self.len), t);
             self.len = self.len + 1;
         }
     }
 
     // Student 1 should implement this.
-    pub fn remove(&mut self, i: usize) {
-        todo!("implement remove");
+    pub fn remove(&mut self, i: usize) -> T {
+        if i >= self.len {
+            panic!("FastVec: remove out of bounds");
+        }
+    
+        unsafe {
+            let removed = std::ptr::read(self.ptr_to_data.add(i));
+    
+            for j in i + 1..self.len {
+                let value = std::ptr::read(self.ptr_to_data.add(j));
+                std::ptr::write(self.ptr_to_data.add(j - 1), value);
+            }
+    
+            self.len -= 1;
+            removed
+        }
     }
 
     // This appears correct but with further testing, you will notice it has a bug!
@@ -101,7 +114,14 @@ impl<T> FastVec<T> {
     // Hint: check out case 2 in memory.rs, which you can run using
     //       cargo run --bin memory
     pub fn clear(&mut self) {
-        MALLOC.free(self.ptr_to_data as *mut u8);
+        unsafe {
+            for i in 0..self.len {
+                std::ptr::read(self.ptr_to_data.add(i));
+            }
+    
+            MALLOC.free(self.ptr_to_data as *mut u8);
+        }
+    
         self.ptr_to_data = null_mut();
         self.len = 0;
         self.capacity = 0;

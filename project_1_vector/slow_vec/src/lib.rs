@@ -31,7 +31,7 @@ impl<T> SlowVec<T> {
         for i in 0..self.fixed.len() {
             v.push(self.fixed.move_out(i));
         }
-        v
+        			v
     }
 
     // Transforms a vector to a SlowVec.
@@ -60,12 +60,39 @@ impl<T> SlowVec<T> {
 
     // Student 1: Provide your solution here.
     pub fn push(&mut self, t: T) {
-        todo!("Student 1 should implement this");
+        let old_len = self.len();
+        let mut tmp = FixedSizeArray::allocate(old_len + 1);
+        for i in 0..old_len {
+            let v = self.fixed.move_out(i);
+            tmp.put(v, i);
+        }
+        tmp.put(t, old_len);
+        self.fixed = tmp;
     }
 
+
     // Student 2: Provide your solution here
-    pub fn remove(&mut self, i: usize) {
-        todo!("Student 2 should implement this");
+    pub fn remove(&mut self, i: usize) -> T {
+        assert!(i < self.len(), "Index out of bounds");
+
+        let old_len = self.len();
+        let mut new_fixed = FixedSizeArray::allocate(old_len - 1);
+        
+        let mut removed: Option<T> = None;
+        let mut j = 0;
+
+        for k in 0..old_len {
+            if k == i {
+                removed = Some(self.fixed.move_out(k));
+            } else {
+                let val = self.fixed.move_out(k);
+                new_fixed.put(val, j);
+                j += 1;
+            }
+        }
+
+        self.fixed = new_fixed;
+        removed.unwrap()
     }
 }
 
