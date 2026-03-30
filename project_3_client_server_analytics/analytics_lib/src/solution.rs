@@ -1,7 +1,9 @@
 use std::collections::HashMap;
+use std::result;
 use crate::dataset::{ColumnType, Dataset, Value, Row};
 use crate::query::{Aggregation, Condition, Query};
 
+// student 1 implemented this function
 fn row_matches(row: &Row, dataset: &Dataset, condition: &Condition) -> bool {
     match condition {
         Condition::Equal(col_name, expected_value) => {
@@ -18,6 +20,7 @@ fn row_matches(row: &Row, dataset: &Dataset, condition: &Condition) -> bool {
     }
 }
 
+// student 1 implementation kept for this function
 pub fn filter_dataset(dataset: &Dataset, filter: &Condition) -> Dataset {
     let mut result = Dataset::new(dataset.columns().clone());
     for row in dataset.iter() {
@@ -27,7 +30,7 @@ pub fn filter_dataset(dataset: &Dataset, filter: &Condition) -> Dataset {
     }
     result
 }
-
+ // student 1 implementation
 pub fn group_by_dataset(dataset: Dataset, group_by_column: &String) -> HashMap<Value, Dataset> {
     let col_idx = dataset.column_index(group_by_column);
     let columns = dataset.columns().clone();
@@ -43,8 +46,60 @@ pub fn group_by_dataset(dataset: Dataset, group_by_column: &String) -> HashMap<V
     groups
 }
 
+// student 2 implementation
+// goes through each grouped dataset and computes one aggregation result per group
 pub fn aggregate_dataset(dataset: HashMap<Value, Dataset>, aggregation: &Aggregation) -> HashMap<Value, Value> {
-    todo!("Implement this!");
+    let mut result = HashMap::new();
+
+    for (group_value, group_dataset) in dataset {
+        match aggregation {
+            Aggregation::Count(_column_name) => {
+                // count uses the number of rows in the group
+                let count = group_dataset.iter().count() as i32;
+                result.insert(group_value, Value::Integer(count));
+            }
+
+            Aggregation::Sum(column_name) => {
+                // finds the target column once so we do not repeat that lookup inside the loop
+                let col_index = group_dataset.column_index(column_name);
+                let mut sum = 0;
+
+                for row in group_dataset.iter() {
+                    match row.get_value(col_index) {
+                        Value::Integer(val) => sum += *val,
+                        Value::String(_) => {
+                            panic!("Cannot sum string values in column '{}'", column_name); 
+                        }
+                    }
+                }
+                result.insert(group_value, Value::Integer(sum));
+            }
+
+            Aggregation::Average(column_name) => {
+                // reuses the same logic as sum but also keeps track of the count to compute the average at the end
+                let col_index = group_dataset.column_index(column_name);
+                let mut sum = 0;
+                let mut count = 0;
+
+                for row in group_dataset.iter() {
+                    match row.get_value(col_index) {
+                        Value::Integer(val) => {
+                            sum += *val;
+                            count += 1;
+                        }
+                        Value::String(_) => {
+                            panic!("Cannot average string values in column '{}'", column_name); 
+                        }
+                    }
+                }
+
+                let average = sum / count;
+                result.insert(group_value, Value::Integer(average));
+            }
+        }
+    }
+
+    result 
 }
 
 pub fn compute_query_on_dataset(dataset: &Dataset, query: &Query) -> Dataset {
