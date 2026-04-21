@@ -11,6 +11,19 @@ fn heuristic(board: &Board) -> i32 {
     let n = cells.len();
     let mut score: i32 = board.score() * 100;
 
+    let center = (n / 2) as i32;
+    for i in 0..n {
+        for j in 0..n {
+            let dist = (i as i32 - center).abs() + (j as i32 - center).abs();
+            let position_bonus = (n as i32 - dist);
+            match &cells[i][j] {
+                Cell::X => score += position_bonus,
+                Cell::O => score -= position_bonus,
+                _ => {}
+            }
+        }
+    }
+
     for i in 0..n {
         for j in 0..n {
             let dirs: &[(i32, i32)] = &[(0, 1), (1, 0), (1, 1), (1, -1)];
@@ -45,7 +58,6 @@ fn eval_window(a: &Cell, b: &Cell, c: &Cell) -> i32 {
     let o_count = cells.iter().filter(|&&c| c == &Cell::O).count();
     let empty_count = cells.iter().filter(|&&c| c == &Cell::Empty).count();
 
-    // Mixed window or contains wall - no potential for either player
     if x_count > 0 && o_count > 0 {
         return 0;
     }
@@ -54,16 +66,16 @@ fn eval_window(a: &Cell, b: &Cell, c: &Cell) -> i32 {
     }
 
     if x_count == 2 && empty_count == 1 {
-        return 10;  // X about to complete a triple
+        return 20;  // X about to complete - high priority
     }
     if o_count == 2 && empty_count == 1 {
-        return -10; // O about to complete a triple
+        return -20; // Block O - equally high priority
     }
     if x_count == 1 && empty_count == 2 {
-        return 2;   // X has a foothold
+        return 3;
     }
     if o_count == 1 && empty_count == 2 {
-        return -2;  // O has a foothold
+        return -3;
     }
 
     0
