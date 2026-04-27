@@ -4,7 +4,7 @@ use tic_tac_toe_stencil::player::Player;
 
 pub struct SolutionAgent {}
 
-const MAX_DEPTH: u32 = 3;
+const MAX_DEPTH: u32 = 5;
 
 fn heuristic(board: &Board) -> i32 {
     let cells = board.get_cells();
@@ -81,7 +81,7 @@ fn eval_window(a: &Cell, b: &Cell, c: &Cell) -> i32 {
     0
 }
 
-fn minimax(board: &mut Board, player: Player, depth: u32) -> (i32, usize, usize) {
+fn minimax(board: &mut Board, player: Player, depth: u32, mut alpha: i32, mut beta: i32) -> (i32, usize, usize) {
     if board.game_over() {
         return (board.score(), 0, 0);
     }
@@ -99,7 +99,7 @@ fn minimax(board: &mut Board, player: Player, depth: u32) -> (i32, usize, usize)
 
     for m in moves {
         board.apply_move(m, player);
-        let (score, _, _) = minimax(board, player.flip(), depth - 1);
+        let (score, _, _) = minimax(board, player.flip(), depth - 1, alpha, beta);
         board.undo_move(m, player);
 
         match player {
@@ -108,13 +108,24 @@ fn minimax(board: &mut Board, player: Player, depth: u32) -> (i32, usize, usize)
                     best_score = score;
                     best_move = m;
                 }
+                if best_score > alpha {
+                    alpha = best_score;
+                }
             }
             Player::O => {
                 if score < best_score {
                     best_score = score;
                     best_move = m;
                 }
+                if best_score < beta {
+                    beta = best_score;
+                }
             }
+        }
+
+        // Prune: this branch can't possibly affect the result
+        if alpha >= beta {
+            break;
         }
     }
 
@@ -123,6 +134,6 @@ fn minimax(board: &mut Board, player: Player, depth: u32) -> (i32, usize, usize)
 
 impl Agent for SolutionAgent {
     fn solve(board: &mut Board, player: Player, _time_limit: u64) -> (i32, usize, usize) {
-        minimax(board, player, MAX_DEPTH)
+        minimax(board, player, MAX_DEPTH, i32::MIN, i32::MAX)
     }
 }
