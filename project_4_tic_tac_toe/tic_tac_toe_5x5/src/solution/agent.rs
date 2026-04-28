@@ -1,10 +1,9 @@
+use std::time::{Duration, Instant};
 use tic_tac_toe_stencil::agents::Agent;
 use tic_tac_toe_stencil::board::{Board, Cell};
 use tic_tac_toe_stencil::player::Player;
 
 pub struct SolutionAgent {}
-
-const MAX_DEPTH: u32 = 5;
 
 fn heuristic(board: &Board) -> i32 {
     let cells = board.get_cells();
@@ -15,7 +14,7 @@ fn heuristic(board: &Board) -> i32 {
     for i in 0..n {
         for j in 0..n {
             let dist = (i as i32 - center).abs() + (j as i32 - center).abs();
-            let position_bonus = (n as i32 - dist);
+            let position_bonus = n as i32 - dist;
             match &cells[i][j] {
                 Cell::X => score += position_bonus,
                 Cell::O => score -= position_bonus,
@@ -66,10 +65,10 @@ fn eval_window(a: &Cell, b: &Cell, c: &Cell) -> i32 {
     }
 
     if x_count == 2 && empty_count == 1 {
-        return 20;  // X about to complete - high priority
+        return 20;
     }
     if o_count == 2 && empty_count == 1 {
-        return -20; // Block O - equally high priority
+        return -20;
     }
     if x_count == 1 && empty_count == 2 {
         return 3;
@@ -81,13 +80,25 @@ fn eval_window(a: &Cell, b: &Cell, c: &Cell) -> i32 {
     0
 }
 
-fn minimax(board: &mut Board, player: Player, depth: u32, mut alpha: i32, mut beta: i32) -> (i32, usize, usize) {
+fn minimax(
+    board: &mut Board,
+    player: Player,
+    depth: u32,
+    mut alpha: i32,
+    mut beta: i32,
+    deadline: &Instant,
+) -> Option<(i32, usize, usize)> {
+    // If we're out of time, return None to signal the caller to stop
+    if deadline.elapsed() > Duration::from_millis(1800) {
+        return None;
+    }
+
     if board.game_over() {
-        return (board.score(), 0, 0);
+        return Some((board.score(), 0, 0));
     }
 
     if depth == 0 {
-        return (heuristic(board), 0, 0);
+        return Some((heuristic(board), 0, 0));
     }
 
     let moves = board.moves();
@@ -99,8 +110,14 @@ fn minimax(board: &mut Board, player: Player, depth: u32, mut alpha: i32, mut be
 
     for m in moves {
         board.apply_move(m, player);
-        let (score, _, _) = minimax(board, player.flip(), depth - 1, alpha, beta);
+        let result = minimax(board, player.flip(), depth - 1, alpha, beta, deadline);
         board.undo_move(m, player);
+
+        // If we ran out of time mid-search, propagate None up
+        let (score, _, _) = match result {
+            Some(r) => r,
+            None => return None,
+        };
 
         match player {
             Player::X => {
@@ -123,17 +140,37 @@ fn minimax(board: &mut Board, player: Player, depth: u32, mut alpha: i32, mut be
             }
         }
 
-        // Prune: this branch can't possibly affect the result
         if alpha >= beta {
             break;
         }
     }
 
-    (best_score, best_move.0, best_move.1)
+    Some((best_score, best_move.0, best_move.1))
 }
 
 impl Agent for SolutionAgent {
-    fn solve(board: &mut Board, player: Player, _time_limit: u64) -> (i32, usize, usize) {
-        minimax(board, player, MAX_DEPTH, i32::MIN, i32::MAX)
+    fn solve(board: &mut Board, player: Player, time_limit: u64) -> (i32, usize, usize) {
+        let deadline = Instant::now();
+        let limit = Duration::from_millis(time_limit);
+        let cutoff = limit.mul_f64(0.9); // stop at 90% of time limit
+
+        let mut best = (0, 0, 0);
+
+        // Iterative deepening: try depth 1, 2, 3... until time runs out
+        for depth in 1.. {
+            match minimax(board, player, depth, i32::MIN, i32::MAX, &deadline) {
+                Some(result) => {
+                    best = result;
+                    // If we finished this depth and time is already close, stop
+                    if deadline.elapsed() >= cutoff {
+                        break;
+                    }
+                }
+                // Ran out of time mid-search, use best result from previous depth
+                None => break,
+            }
+        }
+
+        best
     }
 }
