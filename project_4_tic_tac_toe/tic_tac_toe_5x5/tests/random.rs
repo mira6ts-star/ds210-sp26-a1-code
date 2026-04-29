@@ -1,3 +1,6 @@
+// tests against the RandomAgent — an agent that picks moves randomly
+// your agent must win more than half the time
+// tests on 5 random walls layout as both X and O
 use tic_tac_toe_5x5::layout::Layout5x5;
 use tic_tac_toe_5x5::solution::agent::SolutionAgent;
 use tic_tac_toe_stencil::agents::RandomAgent;
