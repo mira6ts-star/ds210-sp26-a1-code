@@ -114,6 +114,8 @@ fn minimax(
         return None;
     }
 
+    // game_over() returns true when board is full (5x5) or someone has 3 in a row (3x3)
+    // score() counts completed triplets — positive means X winning, negative means O winning
     if board.game_over() {
         return Some((board.score(), 0, 0));
     }
