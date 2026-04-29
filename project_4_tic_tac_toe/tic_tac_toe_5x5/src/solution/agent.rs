@@ -14,10 +14,12 @@ fn heuristic(board: &Board) -> i32 {
     for i in 0..n {
         for j in 0..n {
             let dist = (i as i32 - center).abs() + (j as i32 - center).abs();
-            let position_bonus = n as i32 - dist;
+            let position_bonus = n as i32 - dist; // higher = closer to center
             match &cells[i][j] {
+                // X rewards center — offensive, building triplets from center
                 Cell::X => score += position_bonus,
-                Cell::O => score -= position_bonus,
+                // O rewards edges — defensive, blocking X's lines which form on edges
+                Cell::O => score -= dist, // further from center = better for O
                 _ => {}
             }
         }
