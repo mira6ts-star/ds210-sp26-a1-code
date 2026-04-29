@@ -1,3 +1,7 @@
+// tests your agent on a 5x5 board with 5 random walls
+// plays against the TestAgent (the professor's baseline agent)
+// your agent must win more than half the time as both X and O
+// this is the main test that was failing before depth limiting
 use tic_tac_toe_5x5::layout::Layout5x5;
 use tic_tac_toe_5x5::solution::agent::SolutionAgent;
 use tic_tac_toe_stencil::agents::TestAgent;
