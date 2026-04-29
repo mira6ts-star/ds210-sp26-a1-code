@@ -114,7 +114,7 @@ fn minimax(
         return None;
     }
 
-    // game_over() returns true when board is full (5x5) or someone has 3 in a row (3x3)
+    // game_over() 3x3: game ends early when someone gets 3 in a row OR board is full, 5x5: game ends when board is completely full
     // score() counts completed triplets — positive means X winning, negative means O winning
     if board.game_over() {
         return Some((board.score(), 0, 0));
