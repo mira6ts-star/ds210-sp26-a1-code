@@ -7,39 +7,56 @@ pub struct SolutionAgent {}
 
 // heuristic estimates how good the board is when we can't search all the way to the end
 // positive score favors X, negative favors O
+// heuristic estimates how good the board is when we can't search all the way to the end
+// positive score favors X, negative favors O
 fn heuristic(board: &Board) -> i32 {
     let cells = board.get_cells();
     let n = cells.len();
-    let mut score: i32 = board.score() * 100; // multiply by 100 so completed triplets always outweigh partial bonuses
+    let empty_count = board.moves().len();
+    let total_cells = n * n;
 
+    // determine game stage based on how many empty cells remain
+    // adjust weights so strategy changes throughout the game
+    let (triplet_weight, two_weight, one_weight) =
+        if empty_count > total_cells * 2 / 3 {
+            // early game: position matters more, threats matter less
+            (100, 10, 2)
+        } else if empty_count > total_cells / 3 {
+            // mid game: balanced weights
+            (100, 20, 3)
+        } else {
+            // late game: completing and blocking triplets is critical
+            (150, 40, 3)
+        };
+
+    let mut score: i32 = board.score() * triplet_weight as i32;
+
+    // center preference for X, edge preference for O
     let center = (n / 2) as i32;
     for i in 0..n {
         for j in 0..n {
             let dist = (i as i32 - center).abs() + (j as i32 - center).abs();
+            let position_bonus = n as i32 - dist;
             match &cells[i][j] {
                 // X rewards center — offensive, building triplets from center
                 Cell::X => score += position_bonus,
                 // O rewards edges — defensive, blocking X's lines which form on edges
-                Cell::O => score -= dist, // further from center = better for O
+                Cell::O => score -= dist,
                 _ => {}
             }
         }
     }
 
+    // window scanning in 4 directions
     for i in 0..n {
         for j in 0..n {
-            // scan in 4 directions for triplets: right, down, down-right diagonal, down-left diagonal
             let dirs: &[(i32, i32)] = &[(0, 1), (1, 0), (1, 1), (1, -1)];
             for (di, dj) in dirs {
-                // calculate the coordinates of the 2nd and 3rd cells in the window
-                // by stepping once and twice in the current direction
                 let i2 = i as i32 + di;
                 let j2 = j as i32 + dj;
                 let i3 = i as i32 + 2 * di;
                 let j3 = j as i32 + 2 * dj;
 
-                // make sure all 3 cells in the window are actually on the board before accessing them
-                // cells near the edge may step off the board when we move in a direction
                 if i2 < 0 || j2 < 0 || i3 < 0 || j3 < 0 {
                     continue;
                 }
@@ -47,13 +64,11 @@ fn heuristic(board: &Board) -> i32 {
                     continue;
                 }
 
-                // get the 3 cells in this window and evaluate the
                 let a = &cells[i][j];
                 let b = &cells[i2 as usize][j2 as usize];
                 let c = &cells[i3 as usize][j3 as usize];
 
-                // add the window score to the total heuristic score
-                score += eval_window(a, b, c);
+                score += eval_window_weighted(a, b, c, two_weight, one_weight);
             }
         }
     }
@@ -61,7 +76,7 @@ fn heuristic(board: &Board) -> i32 {
     score
 }
 
-fn eval_window(a: &Cell, b: &Cell, c: &Cell) -> i32 {
+fn eval_window_weighted(a: &Cell, b: &Cell, c: &Cell, two_weight: i32, one_weight: i32) -> i32 {
     let cells = [a, b, c];
     let x_count = cells.iter().filter(|&&c| c == &Cell::X).count();
     let o_count = cells.iter().filter(|&&c| c == &Cell::O).count();
@@ -71,27 +86,24 @@ fn eval_window(a: &Cell, b: &Cell, c: &Cell) -> i32 {
     if x_count > 0 && o_count > 0 {
         return 0;
     }
-
     // if the window contains a wall, it can never become a triplet
     if x_count + o_count + empty_count < 3 {
         return 0;
     }
 
-    // two in a row with an open end is high priority — one move from completing a triplet
+    // two in a row with an open end — one move from completing a triplet
     if x_count == 2 && empty_count == 1 {
-        return 20;
+        return two_weight;
     }
     if o_count == 2 && empty_count == 1 {
-        return -20;
+        return -two_weight;
     }
-
-    // single piece with open space has some value but much less than two in a row
-    // values kept below 20 and 100 to maintain hierarchy: triplet > two-in-a-row > single piece
+    // single piece with open space
     if x_count == 1 && empty_count == 2 {
-        return 3;
+        return one_weight;
     }
     if o_count == 1 && empty_count == 2 {
-        return -3;
+        return -one_weight;
     }
 
     0
