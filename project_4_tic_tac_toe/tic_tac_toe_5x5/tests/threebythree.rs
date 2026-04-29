@@ -1,3 +1,6 @@
+// tests your agent on the 3x3 layout (no walls)
+// makes sure your 5x5 solution still works correctly on a regular 3x3 board
+// runs your agent as both X and O against random and baseline agents
 use tic_tac_toe_5x5::layout::Layout5x5;
 use tic_tac_toe_5x5::solution::agent::SolutionAgent;
 use tic_tac_toe_stencil::agents::{RandomAgent, TestAgent, FirstMoveAgent};
