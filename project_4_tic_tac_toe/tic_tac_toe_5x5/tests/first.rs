@@ -1,3 +1,7 @@
+// tests against the FirstMoveAgent — an agent that always picks the first available move
+// should be the easiest to beat
+// tests on both empty board and 5 random walls layout
+// runs as both X and O
 use tic_tac_toe_5x5::layout::Layout5x5;
 use tic_tac_toe_5x5::solution::agent::SolutionAgent;
 use tic_tac_toe_stencil::agents::FirstMoveAgent;
