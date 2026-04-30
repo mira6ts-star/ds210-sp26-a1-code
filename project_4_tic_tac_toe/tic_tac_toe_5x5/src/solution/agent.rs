@@ -96,7 +96,7 @@ fn eval_window_weighted(a: &Cell, b: &Cell, c: &Cell, two_weight: i32, one_weigh
         return two_weight;
     }
     if o_count == 2 && empty_count == 1 {
-        return -two_weight;
+        return -two_weight * 3;
     }
     // single piece with open space
     if x_count == 1 && empty_count == 2 {
